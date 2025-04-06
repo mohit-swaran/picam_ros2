@@ -17,7 +17,14 @@ The node can handle multiple cameras connected to the same board at the same tim
 
 ### Install Docker, Docker Build & Docker Compose
 
-E.g. on Debian/Ubuntu follow [these instructions](https://docs.docker.com/engine/install/debian/). Then add the current user to the docker group:
+E.g. on Debian/Ubuntu follow [these instructions](https://docs.docker.com/engine/install/debian/). 
+
+For quick installation on any architectures 
+```bash
+curl -fsSL https://get.docker.com | sh
+```
+Then add the current user to the docker group:
+
 ```bash
 sudo usermod -aG docker ${USER}
 # log out & back in
