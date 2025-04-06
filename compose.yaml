@@ -1,0 +1,22 @@
+services:
+  picam_ros2:
+    image: phntm/picam-ros2:humble
+    container_name: picam-ros2
+    hostname: picam-ros2.local
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    ipc: host # phntm bridge needs this to see other local containers
+    # cpuset: '3' # consider restricting to a single CPU core
+    # shm_size: 200m # more room for camera frames
+    volumes:
+      - ~/picam_ros2/picam_ros2_params.yaml:/ros2_ws/picam_ros2_params.yaml # config goes here
+      - /tmp:/tmp
+      - ~/picam_ros2_calibration:/calibration # calibration files are stored here
+      - /tmp/.X11-unix:/tmp/.X11-unix  # X11 socket for GUI apps
+    environment:
+      - DISPLAY=${DISPLAY}  # Enables GUI forwarding
+    devices:
+      - /dev:/dev # cameras need this
+    command:
+      ros2 launch picam_ros2 picam_launch.py

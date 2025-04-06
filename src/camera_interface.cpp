@@ -76,8 +76,7 @@ void CameraInterface::start() {
     else
         this->log(BLUE, "Not publishing CameraInfo");
 
-    this->log(YELLOW, "FPS: ", this->fps); 
-    this->log(YELLOW, "Camera orientation: ", config->orientation); 
+    this->log(YELLOW, "Camera orinetation: ", config->orientation); 
     this->log(YELLOW, "Stream config: ", this->streamConfig->toString()); 
     this->log(YELLOW, "Stride: ", this->streamConfig->stride); 
     this->log(YELLOW, "Bit rate: ", this->bit_rate); 
@@ -153,19 +152,17 @@ void CameraInterface::start() {
             }
 
             request->controls().set(libcamera::controls::AeEnable, this->ae_enable);
-            if (this->ae_enable) { //auto exposure
+            if (this->ae_enable) {
                 request->controls().set(libcamera::controls::AeMeteringMode, this->ae_metering_mode);
                 request->controls().set(libcamera::controls::AeConstraintMode, this->ae_constraint_mode);
                 request->controls().set(libcamera::controls::AeExposureMode, this->ae_exposure_mode);
                 int64_t frameDurationMax = 1000000 / this->fps; // fps in microseconds
-                int64_t frameDurationMin = 1000000 / this->fps; // fps in microseconds
+                int64_t frameDurationMin = 1000000 / 60; // fps in microseconds
                 request->controls().set(libcamera::controls::FrameDurationLimits, {frameDurationMin, frameDurationMax});
                 // request->controls().set(libcamera::controls::ExposureTimeMode, libcamera::controls::ExposureTimeModeAuto);
                 // request->controls().set(libcamera::controls::AnalogueGainMode, libcamera::controls::AnalogueGainModeAuto);
-            } else if (this->exposure_time > 0.0f) { // no auto exposure, constant time
+            } else if (this->exposure_time > 0.0f) {
                 request->controls().set(libcamera::controls::ExposureTime, this->exposure_time);
-            } else { // use fps
-                request->controls().set(libcamera::controls::ExposureTime, 1000000 / this->fps);
             }
             
             request->controls().set(libcamera::controls::AnalogueGain, this->analog_gain);
@@ -199,7 +196,7 @@ void CameraInterface::start() {
     if (this->publish_h264) {
         this->log("Creating H.264 publisher for ", this->h264_topic);
         auto h264_qos = rclcpp::QoS(1);
-        h264_qos.best_effort();
+        h264_qos.reliable();
         h264_qos.durability_volatile();
         this->h264_publisher = this->node->create_publisher<ffmpeg_image_transport_msgs::msg::FFMPEGPacket>(this->h264_topic, h264_qos);
         
@@ -214,7 +211,7 @@ void CameraInterface::start() {
 
         this->log("Creating Image publisher for ", this->image_topic);
         auto image_qos = rclcpp::QoS(1);
-        image_qos.best_effort();
+        image_qos.reliable();
         image_qos.durability_volatile();
         this->image_publisher = this->node->create_publisher<sensor_msgs::msg::Image>(this->image_topic, image_qos);
         
@@ -228,7 +225,7 @@ void CameraInterface::start() {
     if (this->publish_info) {
         this->log("Creating CameraInfo publisher for ", this->info_topic);
         auto info_qos = rclcpp::QoS(1);
-        info_qos.best_effort();
+        info_qos.reliable();
         info_qos.durability_volatile();
         this->info_publisher = this->node->create_publisher<sensor_msgs::msg::CameraInfo>(this->info_topic, info_qos);
 
@@ -429,35 +426,34 @@ void CameraInterface::publishImage(const std::vector<AVBufferRef *>& planes, con
     setCurrentStamp(&this->out_image_msg.header.stamp, timestamp_ns);
     
     switch (this->image_output_format) {
-        case IMAGE_OUTPUT_FORMAT::BGR8: // we need to resize U and V planes, which costs CPU time
-            {
-                // Create Y plane Mat with stride
-                cv::Mat y_full(height, strides[0], CV_8UC1, planes[0]->data);
+    
+        case IMAGE_OUTPUT_FORMAT::BGR8: 
+        {
+            // Allocate memory for YUV420p format
+            cv::Mat yuv(height * 3 / 2, width, CV_8UC1);
+        
+            // Copy Y plane
+            memcpy(yuv.data, planes[0]->data, height * strides[0]);
+        
+            // Copy UV planes correctly
+            unsigned char *uv_ptr = yuv.data + height * width;
+            memcpy(uv_ptr, planes[1]->data, (height / 2) * strides[1]);
+            memcpy(uv_ptr + (height / 2) * width / 2, planes[2]->data, (height / 2) * strides[2]);
+        
+            // Convert YUV420 to BGR
+            cv::Mat bgr;
+            cv::cvtColor(yuv, bgr, cv::COLOR_YUV2BGR_I420);
+        
+            // Assign data to ROS2 Image message
+            this->out_image_msg.data.assign(bgr.data, bgr.data + (bgr.rows * bgr.cols * 3));
+            this->out_image_msg.step = this->width * 3; 
+        }
+        break;
 
-                // Create U and V plane Mats with stride, but only every other row
-                cv::Mat u_full(height / 2, strides[1], CV_8UC1, planes[1]->data);
-                cv::Mat v_full(height / 2, strides[2], CV_8UC1, planes[2]->data);
-
-                // Resize U and V to match the full image dimensions
-                cv::Mat u_resized, v_resized;
-                cv::resize(u_full.clone(), u_resized, cv::Size(width, height), 0, 0, cv::INTER_NEAREST);
-                cv::resize(v_full.clone(), v_resized, cv::Size(width, height), 0, 0, cv::INTER_NEAREST);
-
-                // Combine YUV planes
-                std::vector<cv::Mat> yuv_channels = {y_full, u_resized, v_resized};
-                cv::Mat yuv;
-                cv::merge(yuv_channels, yuv);
-
-                // Convert YUV420 to RGB
-                cv::Mat bgr;
-                cv::cvtColor(yuv, bgr, cv::COLOR_YUV2BGR);
-
-                this->out_image_msg.data.assign(bgr.data, bgr.data + (bgr.rows*bgr.cols*3));
-            }
-            break;
         case IMAGE_OUTPUT_FORMAT::MONO8:
             {
                 this->out_image_msg.data.assign(planes[0]->data, planes[0]->data + (this->width*this->height));
+                this->out_image_msg.step=this->width*1;
             }
             break;
         case IMAGE_OUTPUT_FORMAT::YUV420:

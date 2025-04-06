@@ -1,0 +1,63 @@
+/**:
+  ros__parameters:
+    # node_name: "picam_ros2"
+    topic_prefix: '/picam_ros2/camera_'
+    log_message_every_sec: 5.0
+    log_scroll: False
+
+    calibration_frames_needed: 10
+    calibration_square_size_m: 0.0175 # set this to your actual calibration square dimension!
+    calibration_pattern_size: [9, 6] # set this to your calibration chessboard size!
+    calibration_files: '/calibration' # calibration files saved here
+
+    /camera_88000: # 88000 is the camera location
+      frame_id: 'StereoCamera-1'
+      enabled: True
+      enable_calibration: False
+      width: 640
+      height: 480
+      hflip: False
+      vflip: False
+
+      hw_encoder: False # True=using hw-encoder, False=CPU
+      bitrate: 3000000
+      compression: 80 # 0=no compression, 100=max
+      framerate: 30
+
+      publish_h264: False
+      publish_info: True
+      publish_image: True
+      image_output_format: bgr8 # put format for the image topic (yuv420, mono8 or bgr8)
+      
+      ae_enable: True # auto exposure enabled
+      # exposure_time_ns: 30000 # manually set fixed exposure time if ae_enable=False
+      awb_enable: True # auto white-balance 
+      # awb_mode: 0 # 0=auto, 1=incandescent, 2=tungsten, 3=fluorescent, 4=indoor, 5=daylight, 6=cloudy
+      contrast: 1.3
+      analog_gain: 1.0 # analog gain of the sensor
+
+    /camera_80000: # New camera at location 80000
+      frame_id: 'StereoCamera-2'
+      enabled: True
+      enable_calibration: False
+      width: 640
+      height: 480
+      hflip: False
+      vflip: False
+
+      hw_encoder: False # True=using hw-encoder, False=CPU
+      bitrate: 3000000
+      compression: 80 # 0=no compression, 100=max
+      framerate: 30
+
+      publish_h264: False
+      publish_info: True
+      publish_image: True
+      image_output_format: bgr8 # put format for the image topic (yuv420, mono8 or bgr8)
+      
+      ae_enable: True # auto exposure enabled
+      # exposure_time_ns: 30000 # manually set fixed exposure time if ae_enable=False
+      awb_enable: True # auto white-balance 
+      # awb_mode: 0 # 0=auto, 1=incandescent, 2=tungsten, 3=fluorescent, 4=indoor, 5=daylight, 6=cloudy
+      contrast: 1.3
+      analog_gain: 1.0 # analog gain of the sensor

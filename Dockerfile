@@ -39,6 +39,17 @@ RUN apt-get install -y v4l-utils ffmpeg
 
 RUN pip3 install --user meson
 RUN apt install -y python3-jinja2
+RUN apt install -y python3-opencv
+RUN pip install opencv-python-headless ffmpeg-python
+RUN apt install -y ros-humble-vision-opencv
+RUN apt install -y ros-humble-rosbridge-suite
+RUN apt install -y ros-humble-v4l2-camera
+RUN apt install -y ros-humble-ffmpeg-image-transport
+RUN apt install -y ros-humble-rqt ros-humble-rqt-image-view
+RUN apt install -y ros-humble-image-transport-plugins
+
+
+
 RUN apt install -y libboost-dev
 RUN apt install -y libgnutls28-dev openssl libtiff-dev pybind11-dev
 RUN apt install -y python3-yaml python3-ply
@@ -125,6 +136,7 @@ COPY ./ $ROS_WS/src/picam_ros2
 RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
      rosdep install -i --from-path src/picam_ros2 --rosdistro $ROS_DISTRO -y && \
      colcon build --packages-select picam_ros2
+
 
 # pimp up prompt with hostame and color
 RUN echo "PS1='\${debian_chroot:+(\$debian_chroot)}\\[\\033[01;35m\\]\\u@\\h\\[\\033[00m\\] \\[\\033[01;34m\\]\\w\\[\\033[00m\\] '"  >> /root/.bashrc
